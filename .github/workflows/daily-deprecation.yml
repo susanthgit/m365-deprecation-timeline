@@ -1,0 +1,75 @@
+name: ⏰ Daily Deprecation Timeline
+
+on:
+  schedule:
+    - cron: '30 5 * * *'  # Daily at 5:30 UTC (5:30 PM NZST), after roadmap
+  workflow_dispatch:  # Manual trigger
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  generate-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 📊 Generate data files
+        run: python scripts/generate_data.py
+
+      - name: 💾 Commit generated files
+        run: |
+          git config user.name "Deprecation Bot"
+          git config user.email "deprecation-bot@aguidetocloud.com"
+          git add site/
+          git diff --cached --quiet || git commit -m "⏰ Deprecation update — $(date -u +%Y-%m-%d)" --author="Deprecation Bot <deprecation-bot@aguidetocloud.com>"
+          git pull --rebase --strategy-option=theirs || (git rebase --abort && git pull --no-rebase -X theirs)
+          git push || true
+
+      - name: 🔄 Update main website with latest data
+        env:
+          GH_TOKEN: ${{ secrets.PERSONAL_PAT }}
+        run: |
+          git clone https://x-access-token:${GH_TOKEN}@github.com/susanthgit/aguidetocloud-revamp.git /tmp/main-site
+          mkdir -p /tmp/main-site/static/data/deprecation-timeline
+          cp site/static/data/deprecation-timeline/latest.json /tmp/main-site/static/data/deprecation-timeline/latest.json
+          cp site/static/data/deprecation-timeline/stats.json /tmp/main-site/static/data/deprecation-timeline/stats.json
+          cp site/static/data/deprecation-timeline/feed.xml /tmp/main-site/static/data/deprecation-timeline/feed.xml
+          cd /tmp/main-site
+          git config user.name "Deprecation Bot"
+          git config user.email "deprecation-bot@aguidetocloud.com"
+          git add static/data/deprecation-timeline/
+          git diff --cached --quiet || git commit -m "⏰ Deprecation data update — $(date -u +%Y-%m-%d)"
+          git push
+
+      - name: 🚀 Deploy main website
+        run: |
+          wget -q https://github.com/gohugoio/hugo/releases/download/v0.159.1/hugo_extended_0.159.1_linux-amd64.tar.gz -O /tmp/hugo.tar.gz
+          tar -xzf /tmp/hugo.tar.gz -C /tmp hugo
+          cd /tmp/main-site
+          /tmp/hugo --minify
+          npm install -g @azure/static-web-apps-cli --quiet 2>/dev/null
+          swa deploy /tmp/main-site/public --deployment-token ${{ secrets.MAIN_SITE_SWA_TOKEN }} --env production
+
+  notify-on-failure:
+    runs-on: ubuntu-latest
+    needs: generate-and-deploy
+    if: failure()
+    steps:
+      - name: 🚨 Create failure issue
+        env:
+          GH_TOKEN: ${{ secrets.PERSONAL_PAT }}
+        run: |
+          gh issue create \
+            --repo susanthgit/m365-deprecation-timeline \
+            --title "🚨 Deprecation pipeline failed — $(date -u +%Y-%m-%d)" \
+            --body "The daily Deprecation Timeline workflow failed. Check the [workflow run](https://github.com/susanthgit/m365-deprecation-timeline/actions) for details."
