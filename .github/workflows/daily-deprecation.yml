@@ -5,21 +5,20 @@ on:
     - cron: '30 5 * * *'  # Daily at 5:30 UTC (5:30 PM NZST), after roadmap
   workflow_dispatch:  # Manual trigger
 
-permissions:
-  contents: write
-
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   generate-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: 📥 Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: 🐍 Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: '3.12'
 
@@ -39,7 +38,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PERSONAL_PAT }}
         run: |
-          git clone https://x-access-token:${GH_TOKEN}@github.com/susanthgit/aguidetocloud-revamp.git /tmp/main-site
+          git clone https://github.com/susanthgit/aguidetocloud-revamp.git /tmp/main-site
+          git -C /tmp/main-site config http.https://github.com/.extraheader "Authorization: bearer ${GH_TOKEN}"
           mkdir -p /tmp/main-site/static/data/deprecation-timeline
           cp site/static/data/deprecation-timeline/latest.json /tmp/main-site/static/data/deprecation-timeline/latest.json
           cp site/static/data/deprecation-timeline/stats.json /tmp/main-site/static/data/deprecation-timeline/stats.json
@@ -55,6 +55,8 @@ jobs:
 
   notify-on-failure:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     needs: generate-and-deploy
     if: failure()
     steps:
