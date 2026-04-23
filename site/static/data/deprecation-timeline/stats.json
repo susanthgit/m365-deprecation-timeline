@@ -1,5 +1,5 @@
 {
-  "generated": "2026-04-22T07:09:44.247207+00:00",
+  "generated": "2026-04-23T07:12:28.757685+00:00",
   "total": 52,
   "active": 38,
   "passed": 14,
@@ -24,7 +24,7 @@
   "next_deadline": {
     "title": "Azure Application Gateway V1 Retirement",
     "deadline": "2026-04-28",
-    "days_remaining": 6,
+    "days_remaining": 5,
     "urgency": "critical"
   },
   "category_meta": {
