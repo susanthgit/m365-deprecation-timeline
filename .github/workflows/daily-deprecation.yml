@@ -38,8 +38,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PERSONAL_PAT }}
         run: |
-          git clone https://github.com/susanthgit/aguidetocloud-revamp.git /tmp/main-site
-          git -C /tmp/main-site config http.https://github.com/.extraheader "Authorization: bearer ${GH_TOKEN}"
+          git clone https://x-access-token:${GH_TOKEN}@github.com/susanthgit/aguidetocloud-revamp.git /tmp/main-site
           mkdir -p /tmp/main-site/static/data/deprecation-timeline
           cp site/static/data/deprecation-timeline/latest.json /tmp/main-site/static/data/deprecation-timeline/latest.json
           cp site/static/data/deprecation-timeline/stats.json /tmp/main-site/static/data/deprecation-timeline/stats.json
